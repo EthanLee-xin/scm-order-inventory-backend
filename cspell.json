@@ -1,0 +1,17 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "ecommerce",
+    "fastify",
+    "postgres",
+    "rabbitmq",
+    "supertest",
+    "vitest",
+    "monolith",
+    "microservice",
+    "deadletter",
+    "dead-letter",
+    "redis"
+  ]
+}

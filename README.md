@@ -1,8 +1,8 @@
-# Nike SCM Order Inventory Module
+# SCM Order Inventory Backend
 
 ## Overview
 
-This repository contains the Nike SCM order and inventory module for a Nike supply chain modernization initiative.
+Production-style supply chain order and inventory backend with Redis idempotency, RabbitMQ, Outbox/Inbox, DLQ, PostgreSQL transactions, and Docker.
 
 > **Scope note:** this repository represents the portion of the broader supply chain program that I was directly responsible for, with a focus on the **order module** and **inventory module**. It does **not** represent the full end-to-end supply chain system, which also includes other business domains and integration surfaces outside the scope of this repository.
 
@@ -893,6 +893,6 @@ This project is licensed under `ISC` as defined in `package.json`.
 
 ## Project Summary
 
-This repository showcases a Nike SCM order and inventory module designed with distributed systems principles, high-concurrency readiness, and modular service boundaries.
+This repository showcases a SCM order and inventory module designed with distributed systems principles, high-concurrency readiness, and modular service boundaries.
 
 It is intended to represent a realistic enterprise backend implementation rather than a classroom exercise or a temporary demo.

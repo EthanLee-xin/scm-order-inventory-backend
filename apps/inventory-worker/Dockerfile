@@ -1,12 +1,26 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm install --production
+RUN npm install
 
-COPY packages/ ./packages/
-COPY services/inventory-worker/ ./services/inventory-worker/
+COPY . .
 
-CMD ["node", "services/inventory-worker/src/worker.js"]
+RUN npm run build
+
+# ==========================================
+# Production
+# ==========================================
+FROM node:20-alpine AS production
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+
+RUN npm install --omit=dev
+
+COPY --from=builder /usr/src/app/dist ./dist
+
+CMD ["node", "dist/apps/inventory-worker/src/worker.js"]

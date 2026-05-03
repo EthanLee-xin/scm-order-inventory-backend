@@ -1,0 +1,48 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.PRODUCTION_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy on production host
+        run: |
+          ssh "${{ secrets.PRODUCTION_SSH_USER }}@${{ secrets.PRODUCTION_SSH_HOST }}" << 'EOF'
+          set -e
+
+          cd "${{ secrets.PRODUCTION_APP_DIR }}"
+
+          cat > .env <<ENVEOF
+          PG_USER=${{ secrets.PRODUCTION_PG_USER }}
+          PG_PASSWORD=${{ secrets.PRODUCTION_PG_PASSWORD }}
+          PG_DATABASE=${{ secrets.PRODUCTION_PG_DATABASE }}
+          PG_PORT=5432
+          PORT=3000
+          DEPLOY_MODE=monolith
+          REMOTE_ORDER_URL=http://scm-order-service:3001
+          REDIS_URL=redis://scm-redis:6379
+          RABBITMQ_URL=amqp://scm-mq:5672
+          JWT_SECRET=${{ secrets.PRODUCTION_JWT_SECRET }}
+          SNOWFLAKE_MACHINE_ID=1
+          ENVEOF
+
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+          docker compose pull
+          docker compose up -d
+          EOF

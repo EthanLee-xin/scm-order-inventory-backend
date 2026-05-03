@@ -1,6 +1,6 @@
+// cspell:ignore typebox
 import { FastifyInstance } from "fastify";
 import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
-import { Type } from "@sinclair/typebox";
 import { OrderClient } from "../clients/order.client.js";
 import {
   getCachedIdempotencyRecord,
@@ -11,46 +11,16 @@ import {
 } from "../../../../shared/infrastructure/idempotency.js";
 import { sendSuccess, sendError } from "../../../../shared/http/response.js";
 import { orderRequestsTotal } from "../../../../shared/infrastructure/metrics.js";
+import {
+  OrderIdempotencyHeaderSchema,
+  OrderCreateBodySchema,
+  OrderAcceptedResponseSchema,
+  OrderErrorResponseSchema,
+} from "../../../../shared/api-contracts/index.js";
 
 interface OrderPluginOptions {
   orderClient: OrderClient;
 }
-
-const OrderHeaderSchema = Type.Object({
-  "idempotency-key": Type.String({
-    minLength: 8,
-    description: "Idempotency key for request deduplication",
-  }),
-});
-
-const OrderBodySchema = Type.Object({
-  productId: Type.String({ minLength: 1, description: "Product unique ID" }),
-  quantity: Type.Integer({
-    minimum: 1,
-    maximum: 1000,
-    description: "Purchasing quantity",
-  }),
-});
-
-const OrderAcceptedDataSchema = Type.Object({
-  message: Type.String(),
-  orderId: Type.String(),
-  status: Type.String(),
-});
-
-const OrderAcceptedResponseSchema = Type.Object({
-  success: Type.Literal(true),
-  data: OrderAcceptedDataSchema,
-});
-
-const ErrorResponseSchema = Type.Object({
-  success: Type.Literal(false),
-  error: Type.Object({
-    code: Type.String(),
-    message: Type.String(),
-    details: Type.Optional(Type.Unknown()),
-  }),
-});
 
 export async function OrderRoutes(
   fastify: FastifyInstance,
@@ -63,14 +33,65 @@ export async function OrderRoutes(
     "/orders",
     {
       schema: {
-        headers: OrderHeaderSchema,
-        body: OrderBodySchema,
+        tags: ["Orders"],
+        summary: "Create an order",
+        description:
+          "Creates a Nike SCM order with idempotency protection and asynchronous downstream processing.",
+        security: [{ bearerAuth: [] }],
+        headers: OrderIdempotencyHeaderSchema,
+        body: OrderCreateBodySchema,
         response: {
-          202: OrderAcceptedResponseSchema,
-          400: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-          409: ErrorResponseSchema,
-          500: ErrorResponseSchema,
+          202: {
+            ...OrderAcceptedResponseSchema,
+            example: {
+              success: true,
+              data: {
+                message: "Order Accepted",
+                orderId: "ORD_1234567890",
+                status: "PROCESSING",
+              },
+            },
+          },
+          400: {
+            ...OrderErrorResponseSchema,
+            example: {
+              success: false,
+              error: {
+                code: "IDEMPOTENCY_KEY_REQUIRED",
+                message: "Idempotency-Key header is required",
+              },
+            },
+          },
+          404: {
+            ...OrderErrorResponseSchema,
+            example: {
+              success: false,
+              error: {
+                code: "PRODUCT_NOT_FOUND",
+                message: "Product not Exist.",
+              },
+            },
+          },
+          409: {
+            ...OrderErrorResponseSchema,
+            example: {
+              success: false,
+              error: {
+                code: "REQUEST_IN_PROGRESS",
+                message: "The same idempotency key is being processed",
+              },
+            },
+          },
+          500: {
+            ...OrderErrorResponseSchema,
+            example: {
+              success: false,
+              error: {
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Internal Server Error",
+              },
+            },
+          },
         },
       },
     },

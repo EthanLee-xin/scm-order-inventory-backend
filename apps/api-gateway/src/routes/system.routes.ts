@@ -1,3 +1,4 @@
+// cspell:ignore typebox
 import { FastifyInstance } from "fastify";
 import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import { Type } from "@sinclair/typebox";
@@ -37,8 +38,20 @@ export async function SystemRoutes(fastify: FastifyInstance) {
     {
       config: { isPublic: true },
       schema: {
+        tags: ["System"],
+        summary: "Health check",
+        description: "Returns the current health status of the API gateway.",
         response: {
-          200: HealthResponseSchema,
+          200: {
+            ...HealthResponseSchema,
+            example: {
+              success: true,
+              data: {
+                status: "ok",
+                service: "api-gateway",
+              },
+            },
+          },
         },
       },
     },
@@ -58,6 +71,10 @@ export async function SystemRoutes(fastify: FastifyInstance) {
     {
       config: { isPublic: true },
       schema: {
+        tags: ["System"],
+        summary: "Readiness check",
+        description:
+          "Checks whether required dependencies such as PostgreSQL and Redis are available.",
         response: {
           200: ReadyResponseSchema,
           503: ErrorResponseSchema,
@@ -90,6 +107,11 @@ export async function SystemRoutes(fastify: FastifyInstance) {
     "/metrics",
     {
       config: { isPublic: true },
+      schema: {
+        tags: ["System"],
+        summary: "Prometheus metrics",
+        description: "Returns Prometheus-compatible metrics for the API gateway.",
+      },
     },
     async (_, reply) => {
       reply.header("Content-Type", metricsRegistry.contentType);

@@ -1,0 +1,58 @@
+name: Deploy to Staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.STAGING_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy on staging host
+        run: |
+          ssh "${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SSH_HOST }}" << 'EOF'
+          set -e
+
+          cd "${{ secrets.STAGING_APP_DIR }}"
+
+          cat > .env <<ENVEOF
+          PG_USER=${{ secrets.STAGING_PG_USER }}
+          PG_PASSWORD=${{ secrets.STAGING_PG_PASSWORD }}
+          PG_DATABASE=${{ secrets.STAGING_PG_DATABASE }}
+          PG_PORT=5432
+          PORT=3000
+          DEPLOY_MODE=monolith
+          REMOTE_ORDER_URL=http://scm-order-service:3001
+          REDIS_URL=redis://scm-redis:6379
+          RABBITMQ_URL=amqp://scm-mq:5672
+          JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}
+          SNOWFLAKE_MACHINE_ID=1
+          ENVEOF
+
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+          docker compose pull
+          docker compose up -d
+          EOF
+
+      - name: Wait for gateway health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "http://${{ secrets.STAGING_HTTP_HOST }}:3000/api/health"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1

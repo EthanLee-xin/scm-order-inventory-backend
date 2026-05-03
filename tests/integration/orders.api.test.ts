@@ -1,6 +1,13 @@
+// cspell:ignore typebox
 import Fastify from "fastify";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OrderRoutes } from "../../apps/api-gateway/src/routes/order.routes.js";
+import {
+  OrderAcceptedResponseSchema,
+  OrderCreateBodySchema,
+  OrderIdempotencyHeaderSchema,
+} from "../../shared/api-contracts/order.js";
+import { Value } from "@sinclair/typebox/value";
 
 const mocks = vi.hoisted(() => ({
   processOrderMock: vi.fn(),
@@ -32,7 +39,22 @@ describe("orders API integration", () => {
     });
   });
 
-  it("returns acceptance payload for a valid order request", async () => {
+  it("validates the order request contract", () => {
+    expect(
+      Value.Check(OrderIdempotencyHeaderSchema, {
+        "idempotency-key": "test-key-123",
+      }),
+    ).toBe(true);
+
+    expect(
+      Value.Check(OrderCreateBodySchema, {
+        productId: "P10001",
+        quantity: 2,
+      }),
+    ).toBe(true);
+  });
+
+  it("returns acceptance payload that matches the response contract", async () => {
     const app = Fastify();
 
     app.addHook("preHandler", async (request) => {
@@ -56,8 +78,11 @@ describe("orders API integration", () => {
       },
     });
 
+    const body = response.json();
+
     expect(response.statusCode).toBe(202);
-    expect(response.json()).toEqual({
+    expect(Value.Check(OrderAcceptedResponseSchema, body)).toBe(true);
+    expect(body).toEqual({
       success: true,
       data: {
         message: "Order Accepted",

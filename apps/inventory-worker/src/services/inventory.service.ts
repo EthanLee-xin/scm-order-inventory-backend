@@ -1,6 +1,6 @@
 import { InventoryRepository } from "../repositories/inventory.repository.js";
 import { MessageInboxRepository } from "../repositories/message-inbox.repository.js";
-import { OrderCreatedEvent } from "../../../../shared/types/index.js";
+import {InventoryOrderCreatedEvent} from '../../../../shared/api-contracts/index.js'
 import { InvalidOrderEventError } from "../../../../shared/errors/index.js";
 import { OrderStatus } from "../../../../shared/types/order-status.js";
 import { canTransitionOrderStatus } from "../../../../shared/types/order-transitions.js";
@@ -11,7 +11,7 @@ export class InventoryService {
     private inboxRepo: MessageInboxRepository,
   ) {}
 
-  async processOrderCreation(orderEvent: OrderCreatedEvent) {
+  async processOrderCreation(orderEvent: InventoryOrderCreatedEvent) {
     if (
       !orderEvent ||
       typeof orderEvent.messageId !== "string" ||

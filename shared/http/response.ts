@@ -1,14 +1,11 @@
 import { FastifyReply } from "fastify";
+
 import {
   ApiErrorResponse,
   ApiSuccessResponse,
-} from "../types/index.js";
+} from "../api-contracts/index.js";
 
-export function sendSuccess<T>(
-  reply: FastifyReply,
-  data: T,
-  statusCode = 200,
-) {
+export function sendSuccess<T>(reply: FastifyReply, data: T, statusCode = 200) {
   return reply.status(statusCode).send({
     success: true,
     data,

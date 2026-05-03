@@ -1,14 +1,28 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm install --production
+RUN npm install
 
-COPY packages/ ./packages
-COPY services/api-gateway ./services/api-gateway
+COPY . .
+
+RUN npm run build
+
+# ==========================================
+# Production
+# ==========================================
+FROM node:20-alpine AS production
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+
+RUN npm install --omit=dev
+
+COPY --from=builder /usr/src/app/dist ./dist
 
 EXPOSE 3000
 
-CMD ["node", "services/api-gateway/src/server.js"]
+CMD ["node", "dist/apps/api-gateway/src/server.js"]

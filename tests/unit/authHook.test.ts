@@ -1,6 +1,12 @@
+// cspell:ignore typebox
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import jwt from "jsonwebtoken";
+import { Value } from "@sinclair/typebox/value";
 import { authHook } from "../../apps/api-gateway/src/plugins/auth.js";
+import {
+  AuthorizationHeaderSchema,
+  UserPayloadSchema,
+} from "../../shared/api-contracts/auth.js";
 
 vi.mock("jsonwebtoken", () => ({
   default: {
@@ -14,6 +20,21 @@ describe("authHook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.JWT_SECRET = "test-secret";
+  });
+
+  it("validates the authorization header and user payload contracts", () => {
+    expect(
+      Value.Check(AuthorizationHeaderSchema, {
+        authorization: "Bearer valid-token",
+      }),
+    ).toBe(true);
+
+    expect(
+      Value.Check(UserPayloadSchema, {
+        id: "user-1",
+        role: "buyer",
+      }),
+    ).toBe(true);
   });
 
   it("returns 401 when authorization header is missing", async () => {

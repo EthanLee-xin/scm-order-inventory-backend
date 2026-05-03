@@ -61,7 +61,7 @@ export class OrderService {
       eventType: "ORDER_CREATED",
       aggregateId: orderId,
       payload: {
-        eventId,
+        messageId: eventId,
         orderId,
         userId,
         productId,

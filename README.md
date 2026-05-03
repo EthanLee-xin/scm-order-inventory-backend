@@ -1,20 +1,32 @@
-# SCM Order Inventory Backend
+# SCM Order & Inventory Backend
 
 ## Overview
 
-Production-style supply chain order and inventory backend with Redis idempotency, RabbitMQ, Outbox/Inbox, DLQ, PostgreSQL transactions, and Docker.
+Production-style supply chain order and inventory backend with Redis idempotency, RabbitMQ, Outbox / Inbox patterns, DLQ handling, PostgreSQL transactions, and Docker.
 
-> **Scope note:** this repository represents the portion of the broader supply chain program that I was directly responsible for, with a focus on the **order module** and **inventory module**. It does **not** represent the full end-to-end supply chain system, which also includes other business domains and integration surfaces outside the scope of this repository.
+> **Scope note:** This repository is a production-style personal reconstruction based on commercial supply chain backend patterns. It focuses on the order and inventory modules only and does not contain proprietary company code, confidential data, or client-specific implementation details.
 
-The system was built to support high-concurrency order intake, fast inventory validation, asynchronous order processing, and horizontally scalable deployment. My responsibility in this project focused on the order and inventory workflows, including request handling, idempotency, stock checking, event publishing, and inventory consumption.
+The system is designed to support high-concurrency order intake, fast inventory validation, asynchronous order processing, and containerized local execution. The implementation focuses on request handling, idempotency, stock checking, event publishing, inventory consumption, and failure isolation.
 
-The platform is implemented with **Node.js**, **TypeScript**, **Redis**, **RabbitMQ**, and **PostgreSQL**, and follows a **microservices-oriented architecture** with a gateway / service split, while retaining local development and containerized runtime support for Nike SCM order and inventory processing.
+The platform is implemented with **Node.js**, **TypeScript**, **Fastify**, **Redis**, **RabbitMQ**, and **PostgreSQL**, and follows a **service-oriented backend architecture** with an API gateway, order service, and inventory worker.
 
 ---
 
+## What this project demonstrates
+
+- API gateway design for order intake
+- Redis-based idempotency for duplicate order submissions
+- RabbitMQ-based asynchronous inventory processing
+- Outbox / Inbox patterns for safer event publication and consumption
+- PostgreSQL transactions for stock consistency
+- DLQ handling for failed inventory messages
+- Docker-based local development and verification
+- Contract-first API documentation with OpenAPI / Swagger
+- GitHub Actions CI for build, test, OpenAPI export, and Docker image workflows
+
 ## Business Context
 
-In a supply chain environment like Nike's, order traffic can spike sharply during promotional events, product launches, and regional demand surges. A production-grade system in this domain must:
+In a large-scale supply chain environment, order traffic can spike sharply during promotional events, product launches, and regional demand surges. A production-grade system in this domain must:
 
 - accept large volumes of concurrent requests without overwhelming the database
 - provide fast stock validation for order placement
@@ -22,7 +34,7 @@ In a supply chain environment like Nike's, order traffic can spike sharply durin
 - tolerate transient failures in distributed messaging and downstream services
 - support safe scaling across multiple runtime instances
 
-This project addresses those requirements through cache-assisted stock validation, request idempotency, asynchronous event delivery, and transactional inventory processing in a Nike SCM context.
+This project addresses those requirements through cache-assisted stock validation, request idempotency, asynchronous event delivery, and transactional inventory processing in a supply chain context.
 
 ---
 
@@ -56,11 +68,11 @@ This implementation focuses on the core order-to-inventory lifecycle in the supp
 
 ---
 
-## My Scope of Responsibility
+## Implementation Scope
 
 ### API Gateway
 
-I was responsible for the gateway-facing flow, including:
+This implementation covers the gateway-facing flow, including:
 
 - JWT-based authentication checks
 - rate limiting at the gateway layer
@@ -70,7 +82,7 @@ I was responsible for the gateway-facing flow, including:
 
 ### Order Service
 
-I also owned the order-domain service flow, including:
+This implementation covers the order-domain service flow, including:
 
 - order creation
 - Snowflake-based `orderId` generation
@@ -81,7 +93,7 @@ I also owned the order-domain service flow, including:
 
 ### Inventory Module
 
-I also owned the inventory-side processing flow, including:
+This implementation covers the inventory-side processing flow, including:
 
 - consuming order-created events from RabbitMQ
 - performing stock deduction in PostgreSQL
@@ -93,7 +105,7 @@ I also owned the inventory-side processing flow, including:
 
 ## Domain Ownership
 
-The repository is organized around three primary runtime components for Nike SCM order and inventory processing:
+The repository is organized around three primary runtime components for supply chain order and inventory processing:
 
 ### API Gateway Domain
 
@@ -138,7 +150,7 @@ The following concerns are implemented as shared capabilities rather than domain
 
 ## Architecture
 
-The architecture below reflects the Nike SCM order and inventory module boundaries:
+The architecture below reflects the supply chain order and inventory module boundaries:
 
 ```text
 Client / Upstream System
@@ -246,6 +258,8 @@ Shared response helpers used by multiple services.
 - **Cache**: Redis
 - **Message Broker**: RabbitMQ
 - **Containerization**: Docker / Docker Compose
+- **API Documentation**: OpenAPI / Swagger
+- **CI/CD**: GitHub Actions, GHCR
 
 ---
 
@@ -370,21 +384,27 @@ Additional improvements that would typically be included in a fully mature produ
 ### Module Responsibilities
 
 #### `apps/api-gateway`
+
 Receives order requests, performs authentication and idempotency checks, and forwards order creation to the order service.
 
 #### `apps/order-service`
+
 Receives forwarded order requests, generates order IDs, persists order data, and records outbox events.
 
 #### `apps/inventory-worker`
+
 Consumes order events and applies transactional inventory updates in PostgreSQL.
 
 #### `shared/config`
+
 Centralized configuration management for environment-driven runtime settings.
 
 #### `shared/infrastructure`
+
 Shared connection utilities for PostgreSQL, Redis, RabbitMQ, and idempotency support.
 
 #### `shared/types`
+
 Shared TypeScript contracts used across the distributed services.
 
 ---
@@ -452,7 +472,7 @@ Create a `.env` file in the project root, or use the environment-specific templa
 ```env
 PG_USER=postgres
 PG_PASSWORD=postgres
-PG_DATABASE=scm-nike
+PG_DATABASE=scm_order_inventory
 PG_PORT=5432
 PG_HOST=localhost
 
@@ -504,6 +524,45 @@ Test coverage is organized into:
 - unit tests
 - integration tests
 - e2e smoke tests
+
+---
+
+## API Contract & Documentation
+
+The project now includes a contract-first API documentation layer powered by TypeBox and Swagger/OpenAPI.
+
+### Contract Layer
+
+Shared API contracts are centralized under `shared/api-contracts/` and cover:
+
+- request and response schemas
+- common response envelopes
+- auth contracts
+- order contracts
+- inventory message contracts
+- centralized error code documentation
+
+### Swagger / OpenAPI
+
+The API Gateway exposes Swagger UI for the documented HTTP API surface.
+
+- Swagger UI: `http://localhost:3000/docs`
+- OpenAPI JSON: `http://localhost:3000/docs/json`
+
+Documented endpoints include:
+
+- `POST /api/orders`
+- `GET /api/health`
+- `GET /api/ready`
+- `GET /api/metrics`
+
+The OpenAPI specification can also be exported via:
+
+```bash
+npm run docs:openapi
+```
+
+This generates `openapi.json` at the repository root.
 
 ---
 
@@ -778,6 +837,56 @@ The repository supports both local monolith execution and microservice-style for
 
 ---
 
+## CI/CD
+
+The repository now includes GitHub Actions workflows for continuous integration, Docker image builds, and environment deployments.
+
+### CI Workflow
+
+The CI workflow runs automatically on pushes and pull requests to `main` and performs:
+
+- `npm ci`
+- TypeScript build validation
+- full test suite execution
+- OpenAPI export
+- OpenAPI artifact upload
+
+Workflow file:
+
+- `.github/workflows/ci.yml`
+
+### Docker Image Build Workflow
+
+Docker images are built per service and pushed to GHCR on `main` pushes.
+
+Service images:
+
+- `scm-api-gateway`
+- `scm-order-service`
+- `scm-inventory-worker`
+
+Workflow file:
+
+- `.github/workflows/build.yml`
+
+### Staging Deployment Workflow
+
+A staging deployment workflow is available for SSH-based deployment to a staging host.
+
+Workflow file:
+
+- `.github/workflows/deploy-staging.yml`
+
+### Production Deployment Workflow
+
+A production deployment workflow is available and configured to use GitHub Environments for approval-based release control.
+
+Workflow file:
+
+- `.github/workflows/deploy-production.yml`
+
+These deployment workflows require repository secrets and target host configuration before they can be used in a real environment.
+
 ## Release and Deployment Notes
 
 ### Current Deployment Model
@@ -840,11 +949,10 @@ To further evolve this into a full production system, the following enhancements
 - centralized structured logging
 - request correlation IDs
 - formal input and output schema validation
-- automated test coverage
+- broader automated test coverage
 - retry strategy and compensation workflows
 - migration-based database management
 - metrics, tracing, and alerting
-- CI/CD automation
 
 ---
 

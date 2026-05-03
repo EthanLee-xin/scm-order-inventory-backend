@@ -1,7 +1,7 @@
 import { Channel, ConsumeMessage } from "amqplib";
 import { config } from "../../../../shared/config/index.js";
 import { InventoryService } from "../services/inventory.service.js";
-import { OrderCreatedEvent } from "../../../../shared/types/index.js";
+import { InventoryOrderCreatedEvent } from "../../../../shared/api-contracts/index.js";
 import { InvalidOrderEventError } from "../../../../shared/errors/index.js";
 import { logger } from "../../../../shared/infrastructure/logger.js";
 
@@ -41,7 +41,7 @@ export class OrderConsumer {
       try {
         const orderEvent = JSON.parse(
           msg.content.toString(),
-        ) as Partial<OrderCreatedEvent>;
+        ) as Partial<InventoryOrderCreatedEvent>;
 
         const timestamp =
           typeof orderEvent.timestamp === "string"
@@ -65,7 +65,7 @@ export class OrderConsumer {
         }
 
         const result = await this.service.processOrderCreation(
-          orderEvent as OrderCreatedEvent,
+          orderEvent as InventoryOrderCreatedEvent,
         );
 
         if (result?.skipped) {

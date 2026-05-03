@@ -1,7 +1,7 @@
 services:
-  nike-scm-order-inventory-db:
+  scm-db:
     image: postgres:16-alpine
-    container_name: nike-scm-order-inventory-db
+    container_name: scm-db
     restart: always
     environment:
       POSTGRES_USER: ${PG_USER}
@@ -11,34 +11,34 @@ services:
       - "5432:5432"
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - nike_scm_order_inventory_db_data:/var/lib/postgresql/data
+      - scm_db_data:/var/lib/postgresql/data
 
-  nike-scm-order-inventory-redis:
+  scm-redis:
     image: redis:alpine
-    container_name: nike-scm-order-inventory-redis
+    container_name: scm-redis
     restart: always
     ports:
       - "6379:6379"
 
-  nike-scm-order-inventory-mq:
+  scm-mq:
     image: rabbitmq:3-management
-    container_name: nike-scm-order-inventory-mq
+    container_name: scm-mq
     restart: always
     ports:
       - "5672:5672"
       - "15672:15672"
 
-  nike-scm-order-inventory-gateway:
-    build: .
-    image: nike-scm-order-inventory-gateway:latest
+  scm-api-gateway:
+    build: ./apps/api-gateway
+    image: scm-api-gateway:latest
     command: node dist/apps/api-gateway/src/server.js
-    container_name: nike-scm-order-inventory-gateway
+    container_name: scm-api-gateway
     restart: always
     environment:
       - DEPLOY_MODE=monolith
-      - PG_HOST=nike-scm-order-inventory-db
-      - REDIS_URL=redis://nike-scm-order-inventory-redis:6379
-      - RABBITMQ_URL=amqp://nike-scm-order-inventory-mq
+      - PG_HOST=scm-db
+      - REDIS_URL=redis://scm-redis:6379
+      - RABBITMQ_URL=amqp://scm-mq
       - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
       - PG_DATABASE=${PG_DATABASE}
@@ -46,48 +46,48 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - nike-scm-order-inventory-db
-      - nike-scm-order-inventory-redis
-      - nike-scm-order-inventory-mq
+      - scm-db
+      - scm-redis
+      - scm-mq
     env_file:
       - .env
 
-  nike-scm-order-inventory-order-service:
-    build: .
-    image: nike-scm-order-inventory-order-service:latest
+  scm-order-service:
+    build: ./apps/order-service
+    image: scm-order-service:latest
     command: node dist/apps/order-service/src/server.js
-    container_name: nike-scm-order-inventory-order-service
+    container_name: scm-order-service
     restart: always
     environment:
-      - PG_HOST=nike-scm-order-inventory-db
-      - RABBITMQ_URL=amqp://nike-scm-order-inventory-mq
+      - PG_HOST=scm-db
+      - RABBITMQ_URL=amqp://scm-mq
       - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
       - PG_DATABASE=${PG_DATABASE}
       - SNOWFLAKE_MACHINE_ID=1
     depends_on:
-      - nike-scm-order-inventory-db
-      - nike-scm-order-inventory-mq
+      - scm-db
+      - scm-mq
     env_file:
       - .env
 
-  nike-scm-order-inventory-worker:
-    build: .
-    image: nike-scm-order-inventory-worker:latest
+  scm-inventory-worker:
+    build: ./apps/inventory-worker
+    image: scm-inventory-worker:latest
     command: node dist/apps/inventory-worker/src/worker.js
-    container_name: nike-scm-order-inventory-worker
+    container_name: scm-inventory-worker
     restart: always
     environment:
-      - PG_HOST=nike-scm-order-inventory-db
-      - RABBITMQ_URL=amqp://nike-scm-order-inventory-mq
+      - PG_HOST=scm-db
+      - RABBITMQ_URL=amqp://scm-mq
       - PG_USER=${PG_USER}
       - PG_PASSWORD=${PG_PASSWORD}
       - PG_DATABASE=${PG_DATABASE}
     depends_on:
-      - nike-scm-order-inventory-db
-      - nike-scm-order-inventory-mq
+      - scm-db
+      - scm-mq
     env_file:
       - .env
 
 volumes:
-  nike_scm_order_inventory_db_data:
+  scm_db_data:

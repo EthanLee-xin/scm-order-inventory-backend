@@ -60,7 +60,7 @@ describe("OrderService", () => {
       eventType: "ORDER_CREATED",
       aggregateId: "ORD_182736451234567890",
       payload: {
-        eventId: "EVT_11111111-1111-1111-1111-111111111111",
+        messageId: "EVT_11111111-1111-1111-1111-111111111111",
         orderId: "ORD_182736451234567890",
         userId: "user-1",
         productId: "P10001",

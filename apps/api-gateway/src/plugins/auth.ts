@@ -1,15 +1,17 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import jwt from "jsonwebtoken";
-import { UserPayload } from "../../../../shared/types/index.js";
-import { InvalidTokenError, UnauthorizedError } from "../../../../shared/errors/index.js";
+import { UserPayloadContract, AuthorizationHeaderSchema } from "../../../../shared/api-contracts/index.js";
+import {
+  InvalidTokenError,
+  UnauthorizedError,
+} from "../../../../shared/errors/index.js";
 
 interface RouteAuthConfig {
   isPublic?: boolean;
 }
 
 export async function authHook(request: FastifyRequest, reply: FastifyReply) {
-  const routeConfig = request.routeOptions
-    .config as unknown as RouteAuthConfig;
+  const routeConfig = request.routeOptions.config as unknown as RouteAuthConfig;
 
   if (routeConfig?.isPublic) {
     return;
@@ -29,7 +31,7 @@ export async function authHook(request: FastifyRequest, reply: FastifyReply) {
 
   try {
     const secret = process.env.JWT_SECRET || "";
-    const decoded = jwt.verify(token, secret) as UserPayload;
+    const decoded = jwt.verify(token, secret) as UserPayloadContract;
 
     request.user = decoded;
   } catch (err) {

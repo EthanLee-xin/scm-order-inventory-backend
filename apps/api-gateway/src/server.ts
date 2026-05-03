@@ -1,7 +1,10 @@
+// cspell:ignore swaggerui
 import Fastify, { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import rateLimit from "@fastify/rate-limit";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import { config } from "../../../shared/config/index.js";
 import { logger } from "../../../shared/infrastructure/logger.js";
 
@@ -28,6 +31,34 @@ fastify.setErrorHandler(errorHandler);
 
 async function bootstrap() {
   const orderClient = new OrderClient(config.remoteOrderUrl);
+
+  await fastify.register(swagger, {
+    openapi: {
+      info: {
+        title: "Nike SCM Order Inventory API",
+        description: "API documentation for the Nike SCM order and inventory gateway.",
+        version: "1.0.0",
+      },
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "JWT",
+          },
+        },
+      },
+      security: [{ bearerAuth: [] }],
+    },
+  });
+
+  await fastify.register(swaggerUi, {
+    routePrefix: "/docs",
+    uiConfig: {
+      docExpansion: "list",
+      deepLinking: false,
+    },
+  });
 
   await fastify.register(rateLimit, {
     max: 2,

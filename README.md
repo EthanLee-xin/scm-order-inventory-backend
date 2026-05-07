@@ -2,7 +2,7 @@
 
 ## Overview
 
-Production-style supply chain order and inventory backend with Redis idempotency, RabbitMQ, Outbox / Inbox patterns, DLQ handling, PostgreSQL transactions, and Docker.
+Production-style supply chain order and inventory backend with Redis idempotency, RabbitMQ, Outbox / Inbox patterns, DLQ handling, PostgreSQL transactions, Docker, OpenAPI documentation, GitHub Actions CI/CD, and AWS cloud deployment using ECS Fargate, ALB, RDS, ElastiCache, and ECR.
 
 > **Scope note:** This repository is a production-style personal reconstruction based on commercial supply chain backend patterns. It focuses on the order and inventory modules only and does not contain proprietary company code, confidential data, or client-specific implementation details.
 
@@ -23,6 +23,9 @@ The platform is implemented with **Node.js**, **TypeScript**, **Fastify**, **Red
 - Docker-based local development and verification
 - Contract-first API documentation with OpenAPI / Swagger
 - GitHub Actions CI for build, test, OpenAPI export, and Docker image workflows
+- AWS cloud deployment using ECS Fargate, ALB, RDS PostgreSQL, ElastiCache Redis, and ECR
+- VPC-based three-tier network design with public, private application, and private data subnets
+- GitHub Actions deployment workflow for Docker image publishing and ECS rolling updates
 
 ## Business Context
 
@@ -254,12 +257,13 @@ Shared response helpers used by multiple services.
 - **Runtime**: Node.js 20+
 - **Language**: TypeScript
 - **Web Framework**: Fastify
-- **Database**: PostgreSQL 16
-- **Cache**: Redis
+- **Database**: PostgreSQL 16 / Amazon RDS PostgreSQL
+- **Cache**: Redis / Amazon ElastiCache Redis
 - **Message Broker**: RabbitMQ
 - **Containerization**: Docker / Docker Compose
 - **API Documentation**: OpenAPI / Swagger
-- **CI/CD**: GitHub Actions, GHCR
+- **Cloud**: AWS ECS Fargate, ALB, VPC, RDS, ElastiCache, ECR, NAT Gateway
+- **CI/CD**: GitHub Actions, Docker image build, ECR push, ECS rolling deployment
 
 ---
 
@@ -886,6 +890,75 @@ Workflow file:
 - `.github/workflows/deploy-production.yml`
 
 These deployment workflows require repository secrets and target host configuration before they can be used in a real environment.
+
+## AWS Cloud Deployment
+
+This project includes an AWS deployment architecture for running the SCM backend services in a cloud environment.
+
+The deployment uses a VPC-based three-tier network design:
+
+- Public subnets for the Application Load Balancer and NAT Gateway
+- Private application subnets for ECS Fargate tasks
+- Private data subnets for PostgreSQL and Redis
+- Security groups to control traffic between the load balancer, application services, database, and cache layers
+- NAT Gateway for outbound internet access from private application subnets
+
+### Data Tier
+
+The data layer is deployed using managed AWS services:
+
+- Amazon RDS for PostgreSQL, deployed in private data subnets
+- Amazon ElastiCache for Redis, deployed in private data subnets
+- Database and cache endpoints are provided to the backend services through environment-based configuration
+
+### Container Registry
+
+The backend services are packaged as Docker images and stored in Amazon Elastic Container Registry.
+
+The image delivery flow includes:
+
+1. Building production Docker images locally or through CI/CD
+2. Authenticating to Amazon ECR using AWS CLI or GitHub Actions credentials
+3. Tagging service images
+4. Pushing images to private ECR repositories
+
+### Compute and Routing
+
+The application services are deployed using Amazon ECS with Fargate.
+
+The runtime architecture includes:
+
+- Application Load Balancer deployed in public subnets
+- ECS Fargate tasks running in private application subnets
+- Task definitions referencing ECR image URLs
+- ECS services managing desired task count and rolling updates
+- Health checks routed through the Application Load Balancer
+
+### CI/CD Deployment
+
+The repository includes a GitHub Actions deployment workflow for AWS ECS.
+
+On merge to the `main` branch, the workflow can:
+
+1. Install dependencies
+2. Build and validate the application
+3. Build Docker images
+4. Push images to Amazon ECR
+5. Update ECS task definitions
+6. Trigger ECS rolling deployment
+
+AWS credentials are stored securely in GitHub Secrets and used by the workflow to authenticate with AWS services.
+
+### Production-Oriented Notes
+
+This deployment demonstrates a production-oriented backend deployment approach using managed AWS infrastructure. In a real production environment, additional hardening would typically include:
+
+- Secrets Manager or SSM Parameter Store for sensitive configuration
+- CloudWatch log aggregation and alarms
+- Auto scaling policies for ECS services
+- RDS backup and maintenance configuration
+- HTTPS termination and certificate management through ACM
+- Infrastructure as Code using Terraform, CDK, or CloudFormation
 
 ## Release and Deployment Notes
 
